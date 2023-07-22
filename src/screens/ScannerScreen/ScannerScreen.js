@@ -26,7 +26,7 @@ const ScannerScreen = () => {
 
   useFocusEffect(
     useCallback(() => {
-      // deleteAllData();
+      let isMounted = true;
       const checkAccessToken = async () => {
         try {
           const storedAccessToken = await AsyncStorage.getItem('accessToken');
@@ -43,20 +43,11 @@ const ScannerScreen = () => {
       };
   
       checkAccessToken();
+      return () => {
+        isMounted = false;
+      }
     }, [])
   );
-
-  const deleteAllData = async () => {
-    try {
-      const keys = await AsyncStorage.getAllKeys();
-      // await AsyncStorage.multiRemove(keys);
-      await AsyncStorage.removeItem('scannedTickets');
-      // console.log('All data deleted from AsyncStorage.');
-      console.log('keys:', keys);
-    } catch (error) {
-      console.error('Error deleting data from AsyncStorage:', error);
-    }
-  };
 
   const showAlert = (message, type) => {
     setNotificationMessage(message);

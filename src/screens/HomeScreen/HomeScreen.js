@@ -7,8 +7,6 @@ import ConfirmationModal from '../../components/ConfirmationModal';
 import AlertBar from '../../components/AlertBar';
 import * as FileSystem from 'expo-file-system';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
-// import { useCallback } from 'react';
-
 
 const Home = () => {
   const [uploadedTickets, setUploadedTickets] = useState(0);
@@ -22,13 +20,6 @@ const Home = () => {
   const [notificationType, setNotificationType] = useState('');
   const [notificationMessage, setNotificationMessage] = useState('');
   const navigation = useNavigation();
-
-  // useEffect(() => {
-
-  //   fetchEventData();
-  //   fetchTicketsFromLocalStorage();
-  // }, []);
-
   
   useFocusEffect(
     useCallback(() => {
@@ -37,7 +28,6 @@ const Home = () => {
       checkAccessToken();
       return () => {
         isMounted = false;
-        // Cleanup function to cancel any ongoing tasks or subscriptions
       };
     }, [])
   );
@@ -64,7 +54,6 @@ const Home = () => {
       const response = await api.get(
         '/global/listeventactive'
       );
-      // console.log('Event data:', response.data);
       const data = response.data;
       setEventData(data);
       let dataTickets = await AsyncStorage.getItem('dataTickets');
