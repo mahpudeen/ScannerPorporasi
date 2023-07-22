@@ -1,0 +1,38 @@
+{
+  "expo": {
+    "name": "Scanner Porporasi",
+    "slug": "QrCode",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon-app.png",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "updates": {
+      "fallbackToCacheTimeout": 0
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/icon-app.png",
+        "backgroundColor": "#FFFFFF"
+      },
+      "package": "com.aitech.ScannerPorporasi"
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "eea0777c-c7cd-4f64-93df-428d44f5361b"
+      }
+    }
+  }
+}
