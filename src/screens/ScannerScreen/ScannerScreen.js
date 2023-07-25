@@ -1,9 +1,9 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { View, Text, TextInput, Button, Image, Modal, StyleSheet } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import moment from 'moment';
-import AlertScan from './../../components/AlertScan';
+import AlertScanBar from '../../components/AlertScanBar';
 
 const ScannerScreen = () => {
   const [headerImage, setHeaderImage] = useState('');
@@ -23,6 +23,12 @@ const ScannerScreen = () => {
   const [modalVisible, setModalVisible] = useState(false);
   const [showWarning, setShowWarning] = useState(false);
   const navigation = useNavigation();
+  const ticketCodeRef = useRef(null);
+
+  
+  useEffect(() => {
+    ticketCodeRef.current.focus();
+  }, []);
 
   useFocusEffect(
     useCallback(() => {
@@ -36,6 +42,7 @@ const ScannerScreen = () => {
             navigation.navigate('Login');
           } else {
             readDataAndDataScanned();
+            ticketCodeRef.current.focus();
           }
         } catch (error) {
           console.error('Error retrieving accessToken from AsyncStorage:', error);
@@ -53,6 +60,9 @@ const ScannerScreen = () => {
     setNotificationMessage(message);
     setNotificationType(type);
     setIsVisible(true);
+    setTimeout(() => {
+      setIsVisible(false);
+    }, 2000);
   };
 
   const readDataAndDataScanned = async () => {
@@ -209,6 +219,7 @@ const ScannerScreen = () => {
       <Text style={{...styles.text, marginTop:20 }}>Check-in gate: {gateValue} </Text>
       <Text style={styles.text}>Total data: {totalDataScanned} <Text style={{...styles.text, color:'red'}}> ({totalDataNotValid} data not valid)</Text> </Text>
       <TextInput
+        ref={ticketCodeRef}
         style={{ borderWidth: 1, borderColor: '#fff', color: '#fff', padding: 5, marginHorizontal: 10, marginVertical: 10 }}
         value={ticketCode}
         onChangeText={handleTicketCodeChange}
@@ -230,11 +241,10 @@ const ScannerScreen = () => {
           }}
         />
       )}
-      <AlertScan
+      <AlertScanBar
         visible={isVisible} 
-        title={notificationMessage}
+        message={notificationMessage}
         type={notificationType}
-        onConfirm={() => setIsVisible(false)}
       />
       <Modal
         animationType="fade"

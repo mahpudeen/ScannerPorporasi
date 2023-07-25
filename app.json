@@ -8,7 +8,7 @@
     "splash": {
       "image": "./assets/splash.png",
       "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#051954"
     },
     "updates": {
       "fallbackToCacheTimeout": 0
@@ -22,7 +22,7 @@
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/icon-app.png",
-        "backgroundColor": "#FFFFFF"
+        "backgroundColor": "#051954"
       },
       "package": "com.aitech.ScannerPorporasi"
     },

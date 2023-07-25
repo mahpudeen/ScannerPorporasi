@@ -34,6 +34,8 @@ const LoginScreen = () => {
         await AsyncStorage.setItem('accessToken', accessToken);
         await AsyncStorage.setItem('browseSession', browseSession);
         
+        setEmail('');
+        setPassword('');
         // Redirect or navigate to the next screen
         navigation.navigate('MainNavigator');
       
@@ -128,6 +130,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     marginBottom: 12,
     paddingHorizontal: 8,
+    fontSize: 16,
   },
   passwordContainer: {
     width: '100%',
@@ -144,6 +147,7 @@ const styles = StyleSheet.create({
     height: 40,
     borderColor: 'gray',
     color: 'white',
+    fontSize: 16,
   },
   eyeIcon: {
     padding: 8,

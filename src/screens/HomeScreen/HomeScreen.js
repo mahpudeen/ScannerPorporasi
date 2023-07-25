@@ -60,7 +60,10 @@ const Home = () => {
       setTimeout(() => {
         if (dataTickets) {
           dataTickets = JSON.parse(dataTickets);
-          setSelectedEvent(dataTickets.eventId);
+          const foundEvent = data.find(event => event.value === dataTickets.eventId);
+          setSelectedEvent(foundEvent ? dataTickets.eventId : data[0].value);
+        } else {
+          setSelectedEvent(data[0].value);
         }
       }, 1000);
     } catch (error) {
@@ -263,9 +266,7 @@ const styles = StyleSheet.create({
   },
   containerSelect: {
     backgroundColor: '#fff',
-    marginVertical: 10,
-    paddingVertical: 10,
-    height: 45,
+    marginVertical: 20,
     borderRadius: 5,
     borderWidth: 1,
     borderColor: '#ccc',
