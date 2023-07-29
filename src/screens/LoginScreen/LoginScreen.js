@@ -6,6 +6,7 @@ import api from '../../services/api';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import AlertBar from '../../components/AlertBar';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import checkInternetConnection from '../../components/checkInternetConnection';
 
 const LoginScreen = () => {
   const [email, setEmail] = useState('');
@@ -22,6 +23,8 @@ const LoginScreen = () => {
         "userLoginId": email,
         "password": password
       }
+      // Check internet connection
+      checkInternetConnection();
       // Send login request
       const response = await api.post('/access/login', data);
       // // Get the access token from the response
@@ -37,7 +40,9 @@ const LoginScreen = () => {
         setEmail('');
         setPassword('');
         // Redirect or navigate to the next screen
-        navigation.navigate('MainNavigator');
+        // navigation.navigate('MainNavigator');
+        
+        resetStack('MainNavigator');
       
       } else {
         let message = response.data.data.message;
@@ -46,6 +51,13 @@ const LoginScreen = () => {
     } catch (error) {
       console.log('Login error:', error);
     }
+  };
+  
+  const resetStack = (routeName) => {
+    navigation.reset({
+      index: 0,
+      routes: [{ name: routeName }],
+    });
   };
   
   const triggerNotification = (type, message) => {

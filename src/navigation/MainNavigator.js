@@ -34,7 +34,7 @@ const MainNavigator = () => {
   }
   return (
     <Tab.Navigator>
-      {roleCode === 'admin' ? (
+      {roleCode === 'admin' || roleCode === 'opd' ? (
       <Tab.Screen
         name="Beranda"
         component={HomeScreen}

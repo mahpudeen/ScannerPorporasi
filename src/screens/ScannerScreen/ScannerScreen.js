@@ -3,6 +3,7 @@ import { View, Text, TextInput, Button, Image, Modal, StyleSheet } from 'react-n
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import moment from 'moment';
+import * as FileSystem from 'expo-file-system';
 import AlertScanBar from '../../components/AlertScanBar';
 
 const ScannerScreen = () => {
@@ -22,6 +23,7 @@ const ScannerScreen = () => {
   const [notificationType, setNotificationType] = useState('');
   const [modalVisible, setModalVisible] = useState(false);
   const [showWarning, setShowWarning] = useState(false);
+  const [dataTickets, setDataTickets] = useState([]);
   const navigation = useNavigation();
   const ticketCodeRef = useRef(null);
 
@@ -67,8 +69,15 @@ const ScannerScreen = () => {
 
   const readDataAndDataScanned = async () => {
     try {
-      const storedData = await AsyncStorage.getItem('dataTickets');
-      const storedDataScanned = await AsyncStorage.getItem('scannedTickets');
+      const headerUri = await AsyncStorage.getItem('headerUri');
+      const footerUri = await AsyncStorage.getItem('footerUri');
+      if (headerUri && footerUri) {
+        setHeaderImage(headerUri);
+        setFooterImage(footerUri);
+      }
+      const dataTickets = await AsyncStorage.getItem('dataTickets');
+      const filePath = FileSystem.documentDirectory + 'tickets.json';
+      const storedData = await FileSystem.readAsStringAsync(filePath);
       const gateValue = await AsyncStorage.getItem('gateValue');
       const browseSession = await AsyncStorage.getItem('browseSession');
       if (gateValue) {
@@ -82,34 +91,35 @@ const ScannerScreen = () => {
         setUser(browseSessionObj.userID);
       }
 
-      if (storedData) {
-        let dataTickets = JSON.parse(storedData);
-        setListTicket(dataTickets);
+      if (storedData && dataTickets) {
+        let storedData2 = JSON.parse(storedData);
+        setListTicket(storedData2);
+        let dataTickets2 = JSON.parse(dataTickets);
+        setDataTickets(dataTickets2);
       } else {
         setListTicket([]);
+        setDataTickets([]);
       }
 
-      if (storedDataScanned) {
-        let dataTickets = JSON.parse(storedData);
-        let dataScan = JSON.parse(storedDataScanned);
+      const filePathScan = FileSystem.documentDirectory + 'scanneds.json';
+      FileSystem.readAsStringAsync(filePathScan)
+      .then((json) => {
+        let storedData2 = JSON.parse(storedData);
+        let dataScan = JSON.parse(json);
         setDataScanned(dataScan);
         setTotalDataScanned(dataScan.length);
 
         let missingTicketCodeCount = dataScan.filter(
-          scannedObj => !dataTickets.listTicket.some(dataObj => dataObj.ticketCode === scannedObj.ticketCode)
+          scannedObj => !storedData2.some(dataObj => dataObj.ticketCode === scannedObj.ticketCode)
         ).length;
         setTotalNotValid(missingTicketCodeCount);
-      } else {
+      })
+      .catch((error) => {
+        console.error('Error while reading JSON data:', error);
         setDataScanned([]);
         setTotalDataScanned(0);
         setTotalNotValid(0);
-      }
-      const headerUri = await AsyncStorage.getItem('headerUri');
-      const footerUri = await AsyncStorage.getItem('footerUri');
-      if (headerUri && footerUri) {
-        setHeaderImage(headerUri);
-        setFooterImage(footerUri);
-      }
+      });
     } catch (error) {
       console.log('Error reading data and dataScanned from AsyncStorage:', error);
     }
@@ -118,10 +128,13 @@ const ScannerScreen = () => {
   const saveDataScanned = async (newDataScanned) => {
     try {
       if (newDataScanned) {
-        await AsyncStorage.setItem('scannedTickets', JSON.stringify(newDataScanned));
+        const filePathScan = FileSystem.documentDirectory + 'scanneds.json';
+        await FileSystem.writeAsStringAsync(filePathScan, JSON.stringify(newDataScanned));
+        await AsyncStorage.setItem('scannedTickets', JSON.stringify(newDataScanned.length));
         setDataScanned(newDataScanned);
         setTotalDataScanned(newDataScanned.length);
         setTicketCode('');
+        ticketCodeRef.current.focus();
       }
     } catch (error) {
       console.log('Error saving dataScanned to AsyncStorage:', error);
@@ -133,7 +146,7 @@ const ScannerScreen = () => {
     clearTimeout(timerId);
 
     const newTimerId = setTimeout(() => {
-      const ticket = listTicket.listTicket.find((ticket) => ticket.ticketCode === value);
+      const ticket = listTicket.find((ticket) => ticket.ticketCode === value);
       const formattedDateTime = moment(new Date()).format('YYYY-MM-DD HH:mm:ss');
       setCheckInTime(formattedDateTime);
 
@@ -146,7 +159,7 @@ const ScannerScreen = () => {
           eventClassId: ticket.eventClassId,
           checkInTime: formattedDateTime,
           status: ticket.count === 0 ? 'success' : 'duplicate',
-          eventId: listTicket.eventId,
+          eventId: dataTickets.eventId,
           gate: gateValue,
           user: user
         };
@@ -173,7 +186,7 @@ const ScannerScreen = () => {
             eventClassId: '',
             checkInTime: formattedDateTime,
             status: 'failed',
-            eventId: listTicket.eventId,
+            eventId: dataTickets.eventId,
             gate: gateValue,
             user: user
           },

@@ -7,6 +7,7 @@ import ConfirmationModal from '../../components/ConfirmationModal';
 import AlertBar from '../../components/AlertBar';
 import * as FileSystem from 'expo-file-system';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import checkInternetConnection from '../../components/checkInternetConnection';
 
 const Home = () => {
   const [uploadedTickets, setUploadedTickets] = useState(0);
@@ -19,6 +20,7 @@ const Home = () => {
   const [isVisible, setIsVisible] = useState(false);
   const [notificationType, setNotificationType] = useState('');
   const [notificationMessage, setNotificationMessage] = useState('');
+  const [username, setUsername] = useState('');
   const navigation = useNavigation();
   
   useFocusEffect(
@@ -76,33 +78,40 @@ const Home = () => {
     try {
       let dataTickets = await AsyncStorage.getItem('dataTickets');
       dataTickets = JSON.parse(dataTickets);
-      const total = dataTickets.listTicket.length;
-      const upload = dataTickets.listTicket.reduce((accumulator, ticket) => {
-        if (ticket.count > 0) {
-          return accumulator + 1;
-        }
-        return accumulator;
-      }, 0);
-      const scanned = await AsyncStorage.getItem('scannedTickets');
-      const scannedTickets = JSON.parse(scanned);
-      let scannedTicketsCount = 0;
-      if (scannedTickets) {
-        scannedTicketsCount = scannedTickets.length;
+      let eventName = '-';
+      if (dataTickets.eventName) {
+        eventName = dataTickets.eventName;
       }
-      setEventName(dataTickets.eventName || '-');
+      const total =  await AsyncStorage.getItem('totalTickets');
+      const upload =  await AsyncStorage.getItem('uploadedTickets');
+      const scanned = await AsyncStorage.getItem('scannedTickets');
+      const browseSession = await AsyncStorage.getItem('browseSession');
+      let username = JSON.parse(browseSession).userName;
+      setUsername(username);
+      setEventName(eventName);
       setTotalTickets(parseInt(total) || 0);
       setUploadedTickets(parseInt(upload) || 0);
-      setScannedTickets(scannedTicketsCount);
+      setScannedTickets(parseInt(scanned) || 0);
     } catch (error) {
       console.log('Error fetching tickets from local storage:', error);
     }
   };
 
   const handleSyncTickets = () => {
+    // Check internet connection
+    checkInternetConnection();
+    console.log('selectedEvent:', selectedEvent);
     api.get('/event/getbyid/' + selectedEvent)
-      .then((response) => {
-        const data = JSON.stringify(response.data.data);
+      .then(async (response) => {
+        // const data = JSON.stringify(response.data.data);
+        const listTicket = response.data.data.listTicket
+        await AsyncStorage.setItem('totalTickets', JSON.stringify(listTicket.length));
+        const json = JSON.stringify(listTicket);
+        const filePath = FileSystem.documentDirectory + 'tickets.json';
+        await FileSystem.writeAsStringAsync(filePath, json)
         const dataJson = response.data.data
+        delete dataJson.listTicket
+        const data = JSON.stringify(dataJson);
         if (dataJson.header && dataJson.footer) {
           saveImageToLocal(dataJson.header, 'header')
           saveImageToLocal(dataJson.footer, 'footer')
@@ -120,6 +129,7 @@ const Home = () => {
       })
       .catch((error) => {
         console.log('Error fetching data from the API:', error);
+        alert('Gagal Sync Tiket');
       });
   };
 
@@ -134,22 +144,42 @@ const Home = () => {
 
   const scannedTicketsEmpty = async () => { 
     await AsyncStorage.removeItem('scannedTickets');
+    await AsyncStorage.removeItem('uploadedTickets');
     fetchTicketsFromLocalStorage();
   };
   
   const handleUploadTickets = async () => {
     try {
-      const storedDataScanned = await AsyncStorage.getItem('scannedTickets');
+      const filePathScan = FileSystem.documentDirectory + 'scanneds.json';
+      const storedDataScanned = await FileSystem.readAsStringAsync(filePathScan);
       const dataScanned = JSON.parse(storedDataScanned);
-      console.log('storedDataScanned:', storedDataScanned);
+      console.log('storedDataScanned:', dataScanned);
+      // Check internet connection
+      checkInternetConnection();
       // Upload the scanned tickets to the API
       api.post('/send/dataticket', dataScanned)
-        .then((data) => {
-          console.log('Scanned tickets uploaded successfully:', data);
+        .then(async (data) => {
           triggerNotification('success', 'Data berhasil di upload')
+          const upload =  await AsyncStorage.getItem('uploadedTickets');
+          const scanned = await AsyncStorage.getItem('scannedTickets');
+          let total = 0;
+          if (isNaN(upload) || upload === null) {
+            total = parseInt(scanned);
+          } else if (isNaN(scanned) || scanned === null) {
+            total = parseInt(upload);
+          } else {
+            total = parseInt(upload) + parseInt(scanned);
+          }
+          await AsyncStorage.setItem('uploadedTickets', total.toString());
+          let newDataScanned = [];
+          const filePathScan = FileSystem.documentDirectory + 'scanneds.json';
+          await FileSystem.writeAsStringAsync(filePathScan, JSON.stringify(newDataScanned));
+          await AsyncStorage.removeItem('scannedTickets');
+          fetchTicketsFromLocalStorage();
         })
         .catch((error) => {
           console.log('Error uploading scanned tickets:', error);
+          alert('Gagal Upload Tiket');
         });
     } catch (error) {
       console.log('Error get dataScanned from AsyncStorage:', error);
@@ -190,7 +220,7 @@ const Home = () => {
   return (
     <View style={styles.container}>
       <Text style={{ fontSize: 24, textAlign: 'center', marginVertical: 20, color: '#fff' }}>
-        Hi, Admin
+        Hi, {username}
       </Text>
       <Text style={{color:'#fff'}}>
         Pilih Event :
