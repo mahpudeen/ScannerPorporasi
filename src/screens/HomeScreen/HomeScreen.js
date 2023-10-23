@@ -36,12 +36,15 @@ const Home = () => {
   
   const checkAccessToken = async () => {
     try {
+      const response = await api.get(
+        '/access/cek'
+      );
       const storedAccessToken = await AsyncStorage.getItem('accessToken');
       // setAccessToken(storedAccessToken);
-      if (!storedAccessToken) {
+      if (!storedAccessToken || response.data.status == 'ERROR') {
         // Redirect to login
         navigation.navigate('Login');
-      } else {
+      } else if (response.data.status == 'SUCCESS') {
         fetchEventData();
         fetchTicketsFromLocalStorage();
       }
@@ -97,10 +100,11 @@ const Home = () => {
     }
   };
 
-  const handleSyncTickets = () => {
+  const handleSyncTickets = async () => {
     // Check internet connection
     checkInternetConnection();
-    console.log('selectedEvent:', selectedEvent);
+    await AsyncStorage.removeItem('headerUri');
+    await AsyncStorage.removeItem('footerUri');
     api.get('/event/getbyid/' + selectedEvent)
       .then(async (response) => {
         // const data = JSON.stringify(response.data.data);
@@ -145,6 +149,9 @@ const Home = () => {
   const scannedTicketsEmpty = async () => { 
     await AsyncStorage.removeItem('scannedTickets');
     await AsyncStorage.removeItem('uploadedTickets');
+    let newDataScanned = [];
+    const filePathScan = FileSystem.documentDirectory + 'scanneds.json';
+    await FileSystem.writeAsStringAsync(filePathScan, JSON.stringify(newDataScanned));
     fetchTicketsFromLocalStorage();
   };
   
@@ -153,34 +160,92 @@ const Home = () => {
       const filePathScan = FileSystem.documentDirectory + 'scanneds.json';
       const storedDataScanned = await FileSystem.readAsStringAsync(filePathScan);
       const dataScanned = JSON.parse(storedDataScanned);
-      console.log('storedDataScanned:', dataScanned);
+      if (dataScanned.length > 0) {
+        const filePathScanBackup = FileSystem.documentDirectory + 'scannedsBackups.json';
+        await FileSystem.writeAsStringAsync(filePathScanBackup, storedDataScanned);
+      }
+      console.log('Data scanned:', filePathScanBackup);
+      
+      // Split the data into batches of 1000
+      const batchSize = 1000;
+      const batches = [];
+      for (let i = 0; i < dataScanned.length; i += batchSize) {
+          batches.push(dataScanned.slice(i, i + batchSize));
+      }
+      let sumUploaded = 0;
+      let sumFailed = 0;
       // Check internet connection
       checkInternetConnection();
+
+      const promises = batches.map(async (batch) => {
+        try {
+            const response = await api.post('/send/dataticket', batch);
+            if (response.data.status === 'SUCCESS' && response.status === 200) {
+              triggerNotification('success', batch.length + ' data berhasil diupload')
+              sumUploaded += batch.length;
+            } else {
+              triggerNotification('failed', batch.length + ' data gagal diupload')
+              sumFailed += batch.length;
+            }
+        } catch (error) {
+            triggerNotification('failed', batch.length + ' data gagal diupload')
+            sumFailed += batch.length;
+            console.error('Error sending data:', error);
+        }
+      });
+
+      await Promise.all(promises);
+
+      if (sumFailed == 0) {
+        triggerNotification('success', 'Semua '+ sumUploaded + ' data berhasil diupload')
+        const upload =  await AsyncStorage.getItem('uploadedTickets');
+        const scanned = await AsyncStorage.getItem('scannedTickets');
+        let total = 0;
+        if (isNaN(upload) || upload === null) {
+          total = parseInt(scanned);
+        } else if (isNaN(scanned) || scanned === null) {
+          total = parseInt(upload);
+        } else {
+          total = parseInt(upload) + parseInt(scanned);
+        }
+        await AsyncStorage.setItem('uploadedTickets', total.toString());
+        let newDataScanned = [];
+        const filePathScan = FileSystem.documentDirectory + 'scanneds.json';
+        await FileSystem.writeAsStringAsync(filePathScan, JSON.stringify(newDataScanned));
+        await AsyncStorage.removeItem('scannedTickets');
+        fetchTicketsFromLocalStorage();
+      } else {
+        triggerNotification('failed', "Sejumlah "+sumFailed+' data gagal diupload')
+      }
       // Upload the scanned tickets to the API
-      api.post('/send/dataticket', dataScanned)
-        .then(async (data) => {
-          triggerNotification('success', 'Data berhasil di upload')
-          const upload =  await AsyncStorage.getItem('uploadedTickets');
-          const scanned = await AsyncStorage.getItem('scannedTickets');
-          let total = 0;
-          if (isNaN(upload) || upload === null) {
-            total = parseInt(scanned);
-          } else if (isNaN(scanned) || scanned === null) {
-            total = parseInt(upload);
-          } else {
-            total = parseInt(upload) + parseInt(scanned);
-          }
-          await AsyncStorage.setItem('uploadedTickets', total.toString());
-          let newDataScanned = [];
-          const filePathScan = FileSystem.documentDirectory + 'scanneds.json';
-          await FileSystem.writeAsStringAsync(filePathScan, JSON.stringify(newDataScanned));
-          await AsyncStorage.removeItem('scannedTickets');
-          fetchTicketsFromLocalStorage();
-        })
-        .catch((error) => {
-          console.log('Error uploading scanned tickets:', error);
-          alert('Gagal Upload Tiket');
-        });
+      // api.post('/send/dataticket', dataScanned)
+      //   .then(async (data) => {
+      //     if (data.data.status === 'SUCCESS' && data.status === 200) {
+      //       triggerNotification('success', 'Data berhasil diupload')
+      //       const upload =  await AsyncStorage.getItem('uploadedTickets');
+      //       const scanned = await AsyncStorage.getItem('scannedTickets');
+      //       let total = 0;
+      //       if (isNaN(upload) || upload === null) {
+      //         total = parseInt(scanned);
+      //       } else if (isNaN(scanned) || scanned === null) {
+      //         total = parseInt(upload);
+      //       } else {
+      //         total = parseInt(upload) + parseInt(scanned);
+      //       }
+      //       await AsyncStorage.setItem('uploadedTickets', total.toString());
+      //       let newDataScanned = [];
+      //       const filePathScan = FileSystem.documentDirectory + 'scanneds.json';
+      //       await FileSystem.writeAsStringAsync(filePathScan, JSON.stringify(newDataScanned));
+      //       await AsyncStorage.removeItem('scannedTickets');
+      //       fetchTicketsFromLocalStorage();
+      //     } else {
+      //       triggerNotification('failed', 'Data gagal diupload')
+      //     }
+      //   })
+      //   .catch((error) => {
+      //     console.log('Error uploading scanned tickets:', error);
+      //     alert('Gagal Upload Tiket');
+      //   });
     } catch (error) {
       console.log('Error get dataScanned from AsyncStorage:', error);
     }
@@ -188,17 +253,17 @@ const Home = () => {
 
   const saveImageToLocal = async (imageUrl, name) => {
     try {
-      const imagePath = `${FileSystem.documentDirectory}${name}.jpeg`; // Change the file name and extension as needed
-  
+      const timestamp = Date.now(); // Get the current timestamp
+      const imagePath = `${FileSystem.documentDirectory}${name}${timestamp}.jpeg`;
+
+      console.log('img:', imageUrl)
+      
       const { uri } = await FileSystem.downloadAsync(imageUrl, imagePath);
-      let storeKey = name+'Uri'
-      AsyncStorage.setItem(storeKey, uri)
-        .then(() => {
-          console.log('Save image to local successfully:', storeKey,':', uri);
-        })
-        .catch((error) => {
-          console.log('Error save image to local:', error);
-        });
+      let storeKey = name + 'Uri';
+    
+      // Save the new URI to AsyncStorage
+      await AsyncStorage.setItem(storeKey, uri);
+      console.log('Saved image to local successfully:', storeKey, ':', uri);
     } catch (error) {
       console.error('Error saving image:', error);
     }

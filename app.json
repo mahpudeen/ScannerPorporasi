@@ -4,7 +4,7 @@
     "slug": "QrCode",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon-app.png",
+    "icon": "./assets/logo.png",
     "splash": {
       "image": "./assets/splash.png",
       "resizeMode": "contain",
@@ -21,7 +21,7 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/icon-app.png",
+        "foregroundImage": "./assets/logo.png",
         "backgroundColor": "#051954"
       },
       "package": "com.aitech.ScannerPorporasi"

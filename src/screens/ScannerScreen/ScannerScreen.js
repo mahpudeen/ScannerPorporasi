@@ -148,6 +148,7 @@ const ScannerScreen = () => {
     const newTimerId = setTimeout(() => {
       const ticket = listTicket.find((ticket) => ticket.ticketCode === value);
       const formattedDateTime = moment(new Date()).format('YYYY-MM-DD HH:mm:ss');
+      console.log('formattedDateTime: ', formattedDateTime);
       setCheckInTime(formattedDateTime);
 
       if (ticket) {

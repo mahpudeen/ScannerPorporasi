@@ -3,7 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Create an instance of axios
 const api = axios.create({
-  baseURL: 'https://demos.finpay.id/porporasisolo/api/', // Replace with your API base URL
+  baseURL: 'https://porporasi-surakarta.finnet.co.id/', // Replace with your API base URL
 });
 
 // Add request interceptor
